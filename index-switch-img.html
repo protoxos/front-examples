@@ -1,0 +1,54 @@
+<select name="" id="image-selector" onchange="switchImage()">
+    <option value="0">Imagen 0</option>
+    <option value="1">Imagen 1</option>
+    <option value="2">Imagen 2</option>
+    <option value="3">Imagen 3</option>
+    <option value="4">Imagen 4</option>
+    <option value="5">Imagen 5</option>
+    <option value="6">Imagen 6</option>
+</select>
+<div class="switch-image">
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/620/1280/720.jpg?hmac=zJr75pJhKKNuIt4YJNCR4QJwZZ59j-_Uq9YI5MHFfr0)"></div>
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/6/1280/720.jpg?hmac=K71uIwLeL5qj1fu5a5x04vJfj51MAw9sZKXP_soKyUs)"></div>
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/971/1280/720.jpg?hmac=AEjpALHl9l_60IK4WT4NfgvjrNh6Ltn2PB5wc428XjM)"></div>
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/642/1280/720.jpg?hmac=ZaEkhQBcHpb8G4nXj8DlSHIlpnbnPHr09mmmjpTKzDY)"></div>
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/491/1280/720.jpg?hmac=Q596pmN7wzzYSHOt2ooZteFLsaQbcfbK3I4rfG80vmc)"></div>
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/27/1280/720.jpg?hmac=zMflbaz5U99dS8giAePcz6pq1ySDfISehv107Mt6v5M)"></div>
+    <div class="item" style="background-image: url(https://i.picsum.photos/id/21/1280/720.jpg?hmac=vPmZzUExNIl8TeyFN0vwdRHGa8uPqnSzsH3Qew-jAlE)"></div>
+</div>
+<style>
+    .switch-image {
+        display: block;
+        height: 50px;
+        width: 100px;
+        background-size: cover;
+        position: relative;
+        overflow: hidden;
+    }
+    .switch-image .item {
+        position: absolute;
+        top: 50px;
+        transition: all ease .2s;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-size: cover;
+    }
+    .switch-image .item.selected {
+        top: 0;
+    }
+</style>
+
+<script>
+    function switchImage() {
+        const list = document.querySelector('#image-selector');
+        const inx = list.value;
+
+        const imgs = document.querySelectorAll('.switch-image > .item');
+        imgs.forEach(i => i.setAttribute('class', 'item'));
+        
+        if(inx > 0 && inx < imgs.length) {
+            imgs[inx].setAttribute('class', 'item selected');
+        }
+    }
+</script>

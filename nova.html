@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Nova</title>
+</head>
+<body>
+    <style>
+        body { background-color: #101D37; }
+        #nova-helper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 250px;
+            margin: -125px 0 0 -125px;
+            transform: scale(2);
+        }
+        #nova-helper > .head {
+            position: absolute;
+            height: 80px;
+            width: 80px;
+            border-radius: 100%;
+            background: rgb(236,236,236);
+            background: linear-gradient(rgb(204 204 204) -25%, rgba(255,255,255,1) 100%);
+            left: 50%;
+            margin-left: -40px;
+        }
+        #nova-helper > .head > .visor {
+            position: absolute;
+            background-color: #101D37;
+            box-shadow: #CCC 0 0 10px;
+            height: 40px;
+            border-radius: 100%;
+            top: 29%;
+            left: 4%;
+            right: 4%;
+            box-shadow: #58C7DA -1px -1px 5px 0px;
+        }
+        #nova-helper > .head > .visor .eyes {
+            position: absolute;
+            background-color: #FFF;
+            border-radius: 100%;
+            width: 15px;
+            height: 20px;
+            top: 25%;
+            box-shadow: #FFF 0 0 10px;
+        }
+        #nova-helper[anim=wink] > .head > .visor .eyes { animation: novawink 3s linear; }
+        #nova-helper[anim=moveleft] > .head > .visor .eyes { animation: novamoveleft 3s linear; }
+        #nova-helper[anim=moveright] > .head > .visor .eyes { animation: novamoveright 3s linear; }
+
+        #nova-helper > .head > .visor .eyes.left{ left: 23%; }
+        #nova-helper > .head > .visor .eyes.right{ left: 58%; }
+        
+        @keyframes novawink {
+            0%, 5%, 8%, 100%{ height: 20px; top: 25%; }
+            6%{ height: 0px; top: 30%; }
+        }
+
+        @keyframes novamoveleft {
+            0%, 35%, 100%{ margin-left: 0%; }
+            5%, 30% { margin-left: -10%; }
+        }
+        @keyframes novamoveright {
+            0%, 35%, 100%{ margin-left: 0%; }
+            5%, 30% { margin-left: 10%; }
+        }
+    </style>
+    
+    <div id="nova-helper">
+        <div class="head">
+            <div class="visor">
+                <div class="eyes left"></div>
+                <div class="eyes right"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var NOVA_COMP = document.querySelector('#nova-helper');
+
+        setInterval(() => { //return;
+            
+            const anims = ['wink', 'moveleft', 'moveright'];
+            const rand = getRndInteger(0, anims.length);
+            if(rand < anims.length) NOVA_COMP.setAttribute('anim', anims[rand]);
+
+            console.log(rand);
+
+        }, 5000);
+
+        getRndInteger = (min, max) => {
+            return Math.floor(Math.random() * (max - min + 1) ) + min;
+        }
+    </script>
+    
+</body>
+</html>

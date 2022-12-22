@@ -1,0 +1,390 @@
+<script src="https://use.fontawesome.com/a53dc889f8.js"></script>
+
+
+<hr>
+Tree 1
+<div class="treeview treeview1"></div>
+<br><br>
+
+<hr>
+Tree 2
+<div class="treeview treeview2"></div>
+<br><br>
+
+<hr>
+Tree 3
+<div class="treeview treeview3"></div>
+<hr>
+
+<style>
+    .treeview .node {
+        margin: 12px 0;
+        padding-left: 20px;
+        position: relative;
+    }
+    .treeview .node .expand-icon {
+        transition: all ease .2s;
+        position: absolute;
+        left: 3px;
+    }
+    .treeview .node .icon {
+        display: inline-block;
+        color: #285DD6;
+    }
+    .treeview .node .icon.fa-recycle {
+        display: inline-block;
+        color: #00b81f;
+    }
+    .treeview .node .text {
+        display: inline-block;
+    }
+    .treeview .node .subitems {
+        display: block;
+        max-height: 0;
+        overflow: hidden;
+        transition: all ease .2s;
+    }
+    .treeview .node.has-child > *:not(.subitems) {
+        cursor: pointer;
+    }
+    .treeview .node.expand > .subitems {
+        display: block;
+        max-height: 800px;
+        overflow: hidden;
+    }
+    .treeview .node.expand > .expand-icon {
+        transform: rotate(90deg);
+    }
+</style>
+<script>
+    class TreeView {
+        constructor(selectorTree, templatePatternID) {
+            // private props
+            this._selectorTree = typeof(selectorTree) == 'string' ? selectorTree : 'div.treeview';
+            this._templatePatternId = typeof(templatePatternID) == 'string' ? templatePatternID : 'treeview-level-';
+            this._customBlocks = [];
+            this._items = [];
+        }
+        // private methods
+        _renderTree() {
+            const tree = $(this._selectorTree);
+            tree.html(this._renderLevel(this._items, 0));
+        }
+        _renderLevel(items, level) {
+            
+            //  Si los items NO vienen en un array, terminamos en vacio
+            if(!Array.isArray(items)) return '';
+
+            //  Buscamos el template del nivel actual
+            const tln = $('#' + this._templatePatternId + level); // template level n
+
+            //  Si existe el template, procedemos.
+            if (tln.length > 0) {
+                
+
+                const template = tln.html();
+                let html = '';
+
+                items.forEach(i => {
+                    const keys = Object.keys(i);
+                    let itemHtml = template;
+
+                    keys.forEach(k => itemHtml = itemHtml.replace(new RegExp('{{' + k + '}}', 'gi'), i[k]) );
+
+                    const _items = this._BlockItems(i.Items, level + 1);
+                    const _refresh = this._BlockRefresh(i);
+                    const _open = this._BlockOpen(i.Items);
+                    const _hasChild = this._BlockHasChild(i.Items);
+
+                    itemHtml = itemHtml
+                        .replace(/{{guid}}/gi, ' data-id="' + i['_Tree_Internal_Id'] + '" ')
+
+                        //  BlockRenders
+                        .replace(/\[\[Items]]/gi, _items)
+                        .replace(/\[\[Refresh]]/gi, _refresh)
+                        .replace(/\[\[Open]]/gi, _open)
+                        .replace(/\[\[HasChild]]/gi, _hasChild);
+
+                    this._customBlocks.forEach(b => {
+                        itemHtml = itemHtml
+                            .replace(new RegExp('#' + b.name + '#', 'gi'), b.fn(i, level));
+                    });
+
+                    html += itemHtml;
+                });
+
+                return html;
+
+            } else if(level > 0) { // Si no hay template para el nivel, revisamos si el nivel NO es root
+
+                const renLev = (lev, baseLevel, templateIndices) => {
+                    if(lev >= 0) {
+                        if(templateIndices[ baseLevel - level ]) {
+                            return templateIndices[ baseLevel - level ];
+                        }
+                        return -1;
+                    }
+                    return -1;
+                };
+
+                const newLevel = renLev(nivel, 3, [1, 2]);
+                if(  newLevel > -1 ) {
+
+                    this._renderLevel(items, newLevel);
+
+                }
+
+                // Renderizamos el nivel anterior
+                return this._renderLevel(items, level - 1);
+            } else {
+                // Si no existe el template y estamos en ROOT, retornamos vacio
+                return '';
+            }
+        }
+        _init() {
+
+            // Eventos de expansión...
+            $(this._selectorTree).on('click', '.node', (e) => {
+                e.stopPropagation();
+                const ele = $(e.currentTarget);
+                const id = ele.attr('data-id');
+                const item = this._getItem(id, this._items)
+
+                if(item != null) {
+                    if (ele.find('.subitems').length > 0)
+                        ele.toggleClass('expand');
+
+                    const open = ele.hasClass('expand');
+                    this.OnNodeClick(item, ele, open ? 'open' : 'close');
+                }
+            });
+        }
+        _guid() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        _processItems(items) {
+            const newItems = [];
+
+            items.forEach(i => {
+                const it = Object.assign({}, i);
+
+                it._Tree_Internal_Id = this._guid();
+
+                if(Array.isArray(it.Items))
+                    it.Items = this._processItems(it.Items);
+
+                newItems.push(it);
+            });
+
+            return newItems;
+        }
+        _getItem(id, items) {
+            //  Buscamos el item en el primer nivel
+            const item = items.filter(i => i._Tree_Internal_Id == id);
+
+            // Si lo encontramos, lo devolvemos
+            if(item.length > 0)
+                return item[0];
+
+            else {
+                //  Si no, buscamos en cada item que tenga subitems
+                for(let i = 0; i < items.length; i++) {
+
+                    //  Si viene el array de items
+                    if(Array.isArray(items[i].Items)) {
+                        //  Buscamos dentro el id (recursive)
+                        const subitem = this._getItem(id, items[i].Items);
+
+                        //  Si el subitem es distinto de null, entonces lo encontramos...
+                        if(subitem != null)
+                            return subitem;
+                    }
+                }
+            }
+
+            // Ñeet
+            return null;
+        }
+        _getItemPath(id, items, path) {
+            
+            if(typeof(path) != 'string') path = '';
+
+            //  Buscamos el item en el primer nivel
+            items.forEach((it, ind) => {
+                if(it._Tree_Internal_Id == id)
+                    path += '.Items[' + ind + ']';
+            });
+            
+            // Si lo encontramos, lo devolvemos
+            if(path != '')
+                return path;
+
+            else {
+                //  Si no, buscamos en cada item que tenga subitems
+                for(let i = 0; i < items.length; i++) {
+
+                    //  Si viene el array de items
+                    if(Array.isArray(items[i].Items)) {
+                        //  Buscamos dentro el id (recursive)
+                        const subitem = this._getItemPath(id, items[i].Items, path);
+
+                        //  Si el subitem es distinto de null, entonces lo encontramos...
+                        if(subitem != null)
+                            return subitem;
+                    }
+                }
+            }
+
+            // Ñeet
+            return null;
+        }
+
+        //  BlockRenders
+        _BlockOpen(items) {   // Renderiza [[Open]]
+                
+                if(typeof(items) != 'object') return '';
+
+                //  Si no vienen items, no hay render
+                if(!Array.isArray(items)) return '';
+
+                if(items.length > 0) return '<span class="fa fa-caret-right expand-icon"></span>';
+
+                return '';
+            }
+        _BlockItems(items, level) {   // Renderiza [[Items]]
+            if(typeof(items) != 'object') return '';
+            if(!Array.isArray(items)) return '';
+            if(!items.length) return '';
+
+            //  Rendereamos los items que nos lleguen
+            const child = this._renderLevel(items, level);
+
+            //  Si hay texto en los items
+            if(child != '') return '<div class="subitems">' + child + '</div>';
+
+            //  Sino, terminamos
+            return '';
+        }
+        _BlockRefresh(item) { // Renderiza [[Refresh]]
+            if(item.Refresh)
+                return '<div class="fa fa-recycle icon"></div>';
+            return '';
+        }
+        _BlockHasChild(items) {
+            if(typeof(items) != 'object') return '';
+
+            //  Si no vienen items, no hay render
+            if(!Array.isArray(items)) return '';
+
+            if(items.length > 0) return ' has-child';
+
+            return '';
+        }
+
+        // public methods
+        AddRenderBlock(name, fn) {
+            if(typeof(fn) == 'function') {
+                this._customBlocks.push({name: name, fn: fn });
+            } else console.log(name + ' no es una función para procesar la información.')
+        }
+        SetItems(items) {
+
+            if(Array.isArray(items)) {
+                this._items = this._processItems(items);
+            }
+
+            this._renderTree();
+        }
+        InsertItems(item, newItem) {
+            const id = item._Tree_Internal_Id;
+            const path = this._getItemPath(id, item.Items, '');
+            console.log(path);
+        }
+        OnNodeClick(item, node, state) { // JSON, JQuery, 'open'|'close'
+
+        }
+    }
+    
+    var tree1 = new TreeView('.treeview1', 'treeview-level-');
+    var tree2 = new TreeView('.treeview2', 'plantilla-especial-');
+    var tree3 = new TreeView('.treeview3', 'plantilla-rara-');
+    window.addEventListener('load', () => { 
+        tree1._init();
+        tree2._init();
+
+        tree3.AddRenderBlock('MiCustomBlock', (item, level) => {
+            return 'El custom funciona bien: nivel ' + level;
+        });
+        tree3._init();
+
+        tree1.SetItems(Items)
+        tree2.SetItems(Items)
+        tree3.SetItems(Items)
+
+    });
+
+</script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<!-- Para el treeview 1 -->
+<script type="text/html" id="treeview-level-0">
+    <div class="node[[HasChild]]" {{guid}}>
+        [[Open]]
+        <div class="fa fa-industry icon"></div>
+        <div class="text">{{Text}}</div>
+        [[Items]]
+    </div>
+</script>
+<script type="text/html" id="treeview-level-1">
+    <div class="node[[HasChild]]" {{guid}}>
+        [[Open]]
+        <div class="fa fa-bullseye icon"></div>
+        <div class="text">Text: {{Text}}</div>
+        [[Items]]
+    </div>
+</script>
+<script type="text/html" id="treeview-level-2">
+    <div class="node[[HasChild]]" {{guid}}>
+        [[Open]]
+        [[Refresh]]
+        <div class="fa fa-user icon"></div>
+        <div class="text">Text: {{Text}}</div>
+        [[Items]]
+    </div>
+</script>
+
+<!-- Para el treeview 2 -->
+<script type="text/html" id="plantilla-especial-0">
+    <div class="node[[HasChild]]" {{guid}}>
+        [[Open]]
+        <div class="text">Text: {{Text}}</div>
+        [[Items]]
+    </div>
+</script>
+
+<!-- Para el treeview 3 -->
+<script type="text/html" id="plantilla-rara-0">
+    <div class="node[[HasChild]]" {{guid}}>
+        {{Text}} #MiCustomBlock#
+    </div>
+</script>
+
+<!-- Origen de datos -->
+<script>
+    var Items = [
+        { Text: 'Primer elemento sin hijos', Items: [] },
+        { Text: 'Segundo con 2 hijos', Items: [
+            { Text: 'Hijo 1' },
+            { Text: 'Hijo 1', Items: [] }
+        ] },
+        { Text: 'Tercero con 1 hijo y dos nietos', Items: [
+            { Text: 'Hijo 1', Items: [
+                { Text: 'Nieto 1', Items: [], Refresh: true },
+                { Text: 'Nieto 2' }
+            ] }
+        ] },
+    ];
+</script>
